@@ -14,9 +14,9 @@ type Schema struct {
 	EntryPoints map[string]NamedType
 	Types       map[string]NamedType
 
-	entryPointNames map[string]string
-	objects         []*Object
-	unions          []*Union
+	EntryPointNames map[string]string
+	Objects         []*Object
+	Unions          []*Union
 }
 
 func (s *Schema) Resolve(name string) common.Type {
@@ -114,7 +114,7 @@ type Field struct {
 
 func New() *Schema {
 	s := &Schema{
-		entryPointNames: make(map[string]string),
+		EntryPointNames: make(map[string]string),
 		Types:           make(map[string]NamedType),
 	}
 	for n, t := range Meta.Types {
@@ -144,7 +144,7 @@ func (s *Schema) Parse(schemaString string) error {
 	}
 
 	s.EntryPoints = make(map[string]NamedType)
-	for key, name := range s.entryPointNames {
+	for key, name := range s.EntryPointNames {
 		t, ok := s.Types[name]
 		if !ok {
 			if !ok {
@@ -154,7 +154,7 @@ func (s *Schema) Parse(schemaString string) error {
 		s.EntryPoints[key] = t
 	}
 
-	for _, obj := range s.objects {
+	for _, obj := range s.Objects {
 		obj.Interfaces = make([]*Interface, len(obj.interfaceNames))
 		for i, intfName := range obj.interfaceNames {
 			t, ok := s.Types[intfName]
@@ -170,7 +170,7 @@ func (s *Schema) Parse(schemaString string) error {
 		}
 	}
 
-	for _, union := range s.unions {
+	for _, union := range s.Unions {
 		union.PossibleTypes = make([]*Object, len(union.typeNames))
 		for i, name := range union.typeNames {
 			t, ok := s.Types[name]
@@ -240,14 +240,14 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 				name := l.ConsumeIdent()
 				l.ConsumeToken(':')
 				typ := l.ConsumeIdent()
-				s.entryPointNames[name] = typ
+				s.EntryPointNames[name] = typ
 			}
 			l.ConsumeToken('}')
 		case "type":
 			obj := parseObjectDecl(l)
 			obj.Desc = desc
 			s.Types[obj.Name] = obj
-			s.objects = append(s.objects, obj)
+			s.Objects = append(s.Objects, obj)
 		case "interface":
 			intf := parseInterfaceDecl(l)
 			intf.Desc = desc
@@ -256,7 +256,7 @@ func parseSchema(s *Schema, l *lexer.Lexer) {
 			union := parseUnionDecl(l)
 			union.Desc = desc
 			s.Types[union.Name] = union
-			s.unions = append(s.unions, union)
+			s.Unions = append(s.Unions, union)
 		case "enum":
 			enum := parseEnumDecl(l)
 			enum.Desc = desc

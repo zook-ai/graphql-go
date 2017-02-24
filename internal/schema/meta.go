@@ -4,7 +4,7 @@ var Meta *Schema
 
 func init() {
 	Meta = &Schema{
-		entryPointNames: make(map[string]string),
+		EntryPointNames: make(map[string]string),
 		Types: map[string]NamedType{
 			"Int":     &Scalar{"Int", "The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1."},
 			"Float":   &Scalar{"Float", "The `Float` scalar type represents signed double-precision fractional values as specified by [IEEE 754](http://en.wikipedia.org/wiki/IEEE_floating_point)."},

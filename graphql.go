@@ -49,6 +49,7 @@ func ParseSchema(schemaString string, resolver interface{}) (*Schema, error) {
 	if err := s.schema.Parse(schemaString); err != nil {
 		return nil, err
 	}
+	fmt.Println("Schema entrypoints", s.schema.EntryPoints)
 
 	if resolver != nil {
 		e, err := exec.Make(s.schema, resolver)
