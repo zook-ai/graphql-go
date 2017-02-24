@@ -4,10 +4,10 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/neelance/graphql-go/errors"
-	"github.com/neelance/graphql-go/internal/query"
-	"github.com/neelance/graphql-go/internal/schema"
-	"github.com/neelance/graphql-go/introspection"
+	"github.com/zook-ai/graphql-go/errors"
+	"github.com/zook-ai/graphql-go/internal/query"
+	"github.com/zook-ai/graphql-go/internal/schema"
+	"github.com/zook-ai/graphql-go/introspection"
 )
 
 var schemaExec iExec

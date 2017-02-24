@@ -9,7 +9,7 @@ import (
 
 	"encoding/json"
 
-	graphql "github.com/neelance/graphql-go"
+	graphql "github.com/zook-ai/graphql-go"
 )
 
 func MarshalID(kind string, spec interface{}) graphql.ID {

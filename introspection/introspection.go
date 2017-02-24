@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/neelance/graphql-go/internal/common"
-	"github.com/neelance/graphql-go/internal/schema"
+	"github.com/zook-ai/graphql-go/internal/common"
+	"github.com/zook-ai/graphql-go/internal/schema"
 )
 
 type Schema struct {
