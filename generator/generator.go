@@ -40,7 +40,6 @@ func (args Args) String() string {
 	for _, a := range args {
 		sum += a.String()
 	}
-	//TODO is the pointer to the struct always there?
 	if len(sum) > 0 {
 		return fmt.Sprintf("args *struct{ %s }", sum)
 	}
@@ -72,7 +71,8 @@ func (r *Resolver) getName() (f string) {
 func (r *Resolver) funcName(name, returnType string, required bool, args Args) string {
 	pName := strings.ToUpper(name[:1]) + name[1:]
 	ret := convertType(returnType)
-	return fmt.Sprintf("\nfunc (r %s) %s(%s) %s {}\n", r.getName(), pName, args.String(), ret)
+	defaultRet := defaultRet(ret)
+	return fmt.Sprintf("\nfunc (r %s) %s(%s) %s {\n\t%s\n}\n", r.getName(), pName, args.String(), ret, defaultRet)
 }
 
 func (r *Resolver) structString() string {
@@ -104,6 +104,29 @@ func convertType(t string) (real string) {
 		real = "*" + real
 	}
 	return
+}
+
+func defaultRet(t string) (d string) {
+	if len(t) > 0 {
+		if t[:1] == "*" {
+			return "return nil"
+		}
+		switch t {
+		case "int":
+			return "return 0"
+		case "string":
+			return "return \"\""
+		case "boolean":
+			return "return false"
+		case "float32":
+			return "return 0"
+		case "uint64":
+			return "return 0"
+		default:
+			return "return " + t + "{}"
+		}
+	}
+	return ""
 }
 
 //This is meant to generate golang stubs from a .graphql file
@@ -165,7 +188,7 @@ func writeDefault() {
 
 import (
 	"io/ioutil"
-	graphql "github.com/zook-ai/graphql-go"
+	graphql "github.com/neelance/graphql-go"
 )
 
 var schema *graphql.Schema
