@@ -62,10 +62,7 @@ func newResolver(typeName string, required bool) *Resolver {
 }
 
 func (r *Resolver) getName() (f string) {
-	if !r.required {
-		f += "*"
-	}
-	return f + r.name
+	return "*" + r.name
 }
 
 func (r *Resolver) funcName(name, returnType string, required bool, args Args) string {
@@ -123,7 +120,7 @@ func defaultRet(t string) (d string) {
 		case "uint64":
 			return "return 0"
 		default:
-			return "return " + t + "{}"
+			return "return &" + t + "{}"
 		}
 	}
 	return ""
