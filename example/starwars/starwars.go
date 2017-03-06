@@ -26,7 +26,7 @@ var Schema = `
 		droid(id: ID!): Droid
 		human(id: ID!): Human
 		starship(id: ID!): Starship
-	}
+	} 
 	# The mutation type, represents all updates we can make to our data
 	type Mutation {
 		createReview(episode: Episode!, review: ReviewInput!): Review
