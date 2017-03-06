@@ -42,7 +42,6 @@ func Make(s *schema.Schema, resolver interface{}) (*Exec, error) {
 			return nil, err
 		}
 	}
-	fmt.Println("Made query-entrypoint")
 
 	if t, ok := s.EntryPoints["mutation"]; ok {
 		if err := b.assignExec(&mutationExec, t, reflect.TypeOf(resolver)); err != nil {
@@ -151,7 +150,6 @@ func (b *execBuilder) makeExec(t common.Type, resolverType reflect.Type) (iExec,
 	case *schema.Union:
 		return b.makeObjectExec(t.Name, nil, t.PossibleTypes, nonNull, resolverType)
 	}
-	fmt.Println("Not in types")
 
 	if !nonNull {
 		if resolverType.Kind() != reflect.Ptr {
