@@ -92,7 +92,7 @@ func convertType(t string) (real string) {
 	case "Float":
 		real = "float32"
 	case "ID":
-		real = "uint64" // TODO check if this is correct
+		real = "graphql.ID"
 	default:
 		real = newResolver(t, required).getName()
 		nomatch = true
@@ -117,8 +117,8 @@ func defaultRet(t string) (d string) {
 			return "return false"
 		case "float32":
 			return "return 0"
-		case "uint64":
-			return "return 0"
+		case "graphql.ID":
+			return "return \"\""
 		default:
 			return "return &" + t + "{}"
 		}
