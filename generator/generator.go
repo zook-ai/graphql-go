@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/zook-ai/graphql-go/internal/schema"
 )
@@ -19,116 +18,8 @@ var (
 	schemaString string
 	stub         *os.File
 	w            *bufio.Writer
-	resolver     *Resolver
 	newFile      bool
 )
-
-// Resolver holds the name of a resolver
-type Resolver struct {
-	name     string
-	required bool
-}
-
-// Arg holds the name, type and notnull of an argument to a function§
-type Arg struct {
-	name     string
-	t        string
-	required bool
-}
-
-// Args is a list of arguments with print functionality
-type Args []Arg
-
-func (args Args) String() string {
-	var sum string
-	for _, a := range args {
-		sum += a.String()
-	}
-	if len(sum) > 0 {
-		return fmt.Sprintf("args *struct{ %s }", sum)
-	}
-	return ""
-}
-
-func (a Arg) String() string {
-	return fmt.Sprint(strings.ToUpper(a.name[:1]), a.name[1:], " ", convertType(a.t))
-}
-
-func newResolver(typeName string, required bool) *Resolver {
-	var r Resolver
-	if len(typeName) > 0 {
-		r.name = strings.ToLower(typeName[:1]) + typeName[1:] + "Resolver"
-	} else {
-		r.name = "resolver"
-	}
-	r.required = required
-	return &r
-}
-
-func (r *Resolver) getName() (f string) {
-	return "*" + r.name
-}
-
-func (r *Resolver) funcName(name, returnType string, required bool, args Args) string {
-	pName := strings.ToUpper(name[:1]) + name[1:]
-	ret := convertType(returnType)
-	defaultRet := defaultRet(ret)
-	return fmt.Sprintf("\nfunc (r %s) %s(%s) %s {\n\t%s\n}\n", r.getName(), pName, args.String(), ret, defaultRet)
-}
-
-func (r *Resolver) structString() string {
-	return fmt.Sprintf("\ntype %s struct{}\n", r.name)
-}
-
-func convertType(t string) (real string) {
-	nomatch := false
-	required := t[len(t)-1:] == "!"
-	if required {
-		t = t[:len(t)-1]
-	}
-	switch t {
-	case "Int":
-		real = "int"
-	case "String":
-		real = "string"
-	case "Boolean":
-		real = "bool"
-	case "Float":
-		real = "float32"
-	case "ID":
-		real = "graphql.ID"
-	default:
-		real = newResolver(t, required).getName()
-		nomatch = true
-	}
-	if !nomatch && !required {
-		real = "*" + real
-	}
-	return
-}
-
-func defaultRet(t string) (d string) {
-	if len(t) > 0 {
-		if t[:1] == "*" {
-			return "return nil"
-		}
-		switch t {
-		case "int":
-			return "return 0"
-		case "string":
-			return "return \"\""
-		case "boolean":
-			return "return false"
-		case "float32":
-			return "return 0"
-		case "graphql.ID":
-			return "return \"\""
-		default:
-			return "return &" + t + "{}"
-		}
-	}
-	return ""
-}
 
 //This is meant to generate golang stubs from a .graphql file
 func main() {
@@ -141,9 +32,9 @@ func main() {
 		panic(fmt.Sprintf("Problems parsing %s:\n\t %s", os.Args[1], err))
 	}
 
-	resolver = newResolver(s.EntryPointNames["query"], false)
+	resolver := newResolver(s.EntryPointNames["query"], false)
 	if newFile {
-		writeDefault()
+		writeDefault(resolver)
 	}
 
 	for _, o := range s.Objects {
@@ -194,7 +85,7 @@ func parseArguments() {
 	}
 }
 
-func writeDefault() {
+func writeDefault(r *Resolver) {
 
 	w.WriteString(`package main
 
@@ -211,7 +102,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	schema = graphql.MustParseSchema(string(b), &` + resolver.name + `{})
+	schema = graphql.MustParseSchema(string(b), &` + r.name + `{})
 }
 func main() {}
 
