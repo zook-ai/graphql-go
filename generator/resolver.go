@@ -66,6 +66,10 @@ func translate(qtype string) (gotype string) {
 
 func convertType(t string) (real string) {
 
+	if t[:1] == "[" && t[len(t)-1:] == "]" {
+		return "[]" + translate(t[1:len(t)-1])
+	}
+
 	if enums.has(t) {
 		return "string"
 	}
@@ -93,7 +97,7 @@ func convertType(t string) (real string) {
 
 func defaultRet(t string) (d string) {
 	if len(t) > 0 {
-		if t[:1] == "*" {
+		if t[:1] == "*" || t[:2] == "[]" {
 			return "return nil"
 		}
 		switch t {
