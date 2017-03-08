@@ -1,22 +1,26 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
-
-	"bufio"
-
 	"strings"
 
 	"github.com/zook-ai/graphql-go/internal/schema"
 )
 
+// [] support multiple entrypoints
+// [] support interfaces
+// [] support input Objects
+// [] support enums
+// [X] Don't overwrite if the file exists.
 var (
 	schemaString string
 	stub         *os.File
 	w            *bufio.Writer
 	resolver     *Resolver
+	newFile      bool
 )
 
 // Resolver holds the name of a resolver
@@ -138,7 +142,10 @@ func main() {
 	}
 
 	resolver = newResolver(s.EntryPointNames["query"], false)
-	writeDefault()
+	if newFile {
+		writeDefault()
+	}
+
 	for _, o := range s.Objects {
 		resolver = newResolver(o.Name, false)
 		w.WriteString(resolver.structString())
@@ -171,10 +178,18 @@ func parseArguments() {
 
 	//Open output path
 	out := os.Args[2]
-	os.Remove(out)
-	stub, err = os.Create(out)
+	if !exists(out) {
+		newFile = true
+		stub, err = os.Create(out)
+		if err != nil {
+			fmt.Printf("Creation of file %s went badly: %s\n", out, err)
+			os.Exit(1)
+		}
+		return
+	}
+	stub, err = os.OpenFile(out, os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
-		fmt.Printf("Creation of file %s went badly: %s\n", out, err)
+		fmt.Printf("Opening file %s went badly: %s\n ", out, err)
 		os.Exit(1)
 	}
 }
@@ -202,4 +217,11 @@ func main() {}
 
 `)
 
+}
+
+func exists(name string) bool {
+	if _, err := os.Stat(name); os.IsNotExist(err) {
+		return false
+	}
+	return true
 }
