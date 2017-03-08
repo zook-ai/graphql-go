@@ -27,7 +27,6 @@ var (
 	newFile      bool
 	enums        existMap
 	inputs       map[string]*InputObject
-	objects      map[string]*Resolver
 )
 
 func (e existMap) has(key string) bool {
