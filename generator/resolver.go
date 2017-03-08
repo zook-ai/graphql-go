@@ -3,21 +3,36 @@ package main
 import (
 	"fmt"
 	"strings"
+
+	"github.com/zook-ai/graphql-go/internal/schema"
 )
 
 // Resolver holds the name of a resolver
 type Resolver struct {
-	name string
+	name  string
+	funcs []string
 }
 
-func newResolver(typeName string) *Resolver {
-	var r Resolver
-	if len(typeName) > 0 {
-		r.name = strings.ToLower(typeName[:1]) + typeName[1:] + "Resolver"
+func resolverName(name string) (resName string) {
+	if len(name) > 0 {
+		resName = strings.ToLower(name[:1]) + name[1:] + "Resolver"
 	} else {
-		r.name = "resolver"
+		resName = "resolver"
 	}
+	return
+}
 
+func newResolver(t *schema.Object) *Resolver {
+	var r Resolver
+	r.name = resolverName(t.Name)
+	for _, fname := range t.FieldOrder {
+		f := t.Fields[fname]
+		var args Args
+		for _, argName := range f.Args.FieldOrder {
+			args = append(args, Arg{argName, f.Args.Fields[argName].Type.String(), false})
+		}
+		r.funcs = append(r.funcs, r.funcName(fname, f.Type.String(), args))
+	}
 	return &r
 }
 
@@ -25,14 +40,15 @@ func (r *Resolver) getName() (f string) {
 	return "*" + r.name
 }
 
-func (r *Resolver) funcName(name, returnType string, required bool, args Args) string {
+func (r *Resolver) funcName(name, returnType string, args Args) string {
 	pName := strings.ToUpper(name[:1]) + name[1:]
 	ret := translate(returnType)
 	defaultRet := defaultRet(ret)
 	return fmt.Sprintf("\nfunc (r %s) %s(%s) %s {\n\t%s\n}\n", r.getName(), pName, args.String(), ret, defaultRet)
 }
 
-func (r *Resolver) structString() string {
+// Struct echoes the struct of a resolver
+func (r *Resolver) Struct() string {
 	return fmt.Sprintf("\ntype %s struct{}\n", r.name)
 }
 
@@ -70,7 +86,7 @@ func convertType(t string) (real string) {
 	case "ID":
 		real = "graphql.ID"
 	default:
-		real = newResolver(t).getName()
+		real = "*" + resolverName(t)
 	}
 	return
 }

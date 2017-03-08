@@ -27,6 +27,7 @@ var (
 	newFile      bool
 	enums        existMap
 	inputs       map[string]*InputObject
+	objects      map[string]*Resolver
 )
 
 func (e existMap) has(key string) bool {
@@ -44,7 +45,9 @@ func main() {
 	if err := s.Parse(schemaString); err != nil {
 		panic(fmt.Sprintf("Problems parsing %s:\n\t %s", os.Args[1], err))
 	}
-	resolver := newResolver(s.EntryPointNames["query"])
+	var tmp Resolver
+	resolver := &tmp
+	resolver.name = resolverName(s.EntryPointNames["query"])
 	if newFile {
 		writeDefault(resolver)
 	}
@@ -63,15 +66,10 @@ func main() {
 
 	// Going through objects and creating resolvers
 	for _, o := range s.Objects {
-		resolver = newResolver(o.Name)
-		w.WriteString(resolver.structString())
-		for _, fname := range o.FieldOrder {
-			f := o.Fields[fname]
-			var args Args
-			for _, argName := range f.Args.FieldOrder {
-				args = append(args, Arg{argName, f.Args.Fields[argName].Type.String(), false})
-			}
-			w.WriteString(resolver.funcName(fname, f.Type.String(), false, args))
+		r := newResolver(o)
+		w.WriteString(r.Struct())
+		for _, f := range r.funcs {
+			w.WriteString(f)
 		}
 	}
 
