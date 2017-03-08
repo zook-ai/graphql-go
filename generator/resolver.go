@@ -7,18 +7,17 @@ import (
 
 // Resolver holds the name of a resolver
 type Resolver struct {
-	name     string
-	required bool
+	name string
 }
 
-func newResolver(typeName string, required bool) *Resolver {
+func newResolver(typeName string) *Resolver {
 	var r Resolver
 	if len(typeName) > 0 {
 		r.name = strings.ToLower(typeName[:1]) + typeName[1:] + "Resolver"
 	} else {
 		r.name = "resolver"
 	}
-	r.required = required
+
 	return &r
 }
 
@@ -28,7 +27,7 @@ func (r *Resolver) getName() (f string) {
 
 func (r *Resolver) funcName(name, returnType string, required bool, args Args) string {
 	pName := strings.ToUpper(name[:1]) + name[1:]
-	ret := convertType(returnType)
+	ret := translate(returnType)
 	defaultRet := defaultRet(ret)
 	return fmt.Sprintf("\nfunc (r %s) %s(%s) %s {\n\t%s\n}\n", r.getName(), pName, args.String(), ret, defaultRet)
 }
@@ -37,15 +36,26 @@ func (r *Resolver) structString() string {
 	return fmt.Sprintf("\ntype %s struct{}\n", r.name)
 }
 
-func convertType(t string) (real string) {
-	nomatch := false
-	required := t[len(t)-1:] == "!"
+func translate(qtype string) (gotype string) {
+	required := qtype[len(qtype)-1:] == "!"
 	if required {
-		t = t[:len(t)-1]
+		qtype = qtype[:len(qtype)-1]
+	}
+	gotype = convertType(qtype)
+	if gotype[:1] != "*" && !required {
+		gotype = "*" + gotype
+	}
+	return
+}
+
+func convertType(t string) (real string) {
+
+	if enums.has(t) {
+		return "string"
 	}
 
-	if _, contains := enums[t]; contains {
-		t = "String"
+	if i, ok := inputs[t]; ok {
+		return i.name
 	}
 
 	switch t {
@@ -60,12 +70,7 @@ func convertType(t string) (real string) {
 	case "ID":
 		real = "graphql.ID"
 	default:
-		real = newResolver(t, required).getName()
-		nomatch = true
-	}
-
-	if !nomatch && !required {
-		real = "*" + real
+		real = newResolver(t).getName()
 	}
 	return
 }

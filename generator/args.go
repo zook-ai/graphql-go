@@ -27,5 +27,5 @@ func (args Args) String() string {
 }
 
 func (a Arg) String() string {
-	return fmt.Sprint(strings.ToUpper(a.name[:1]), a.name[1:], " ", convertType(a.t))
+	return fmt.Sprint(strings.ToUpper(a.name[:1]), a.name[1:], " ", translate(a.t))
 }

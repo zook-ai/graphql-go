@@ -12,18 +12,27 @@ import (
 // [] support mutation
 // [] support subscription
 // [] support interfaces
-// [] support input Objects
+// [X] support input Objects
 // [X] support enums
 // [] support arrays
+// [] support unions
 // [X] Don't overwrite if the file exists.
 // [] parse output files and only add missing methods
+type existMap map[string]interface{}
+
 var (
 	schemaString string
 	stub         *os.File
 	w            *bufio.Writer
 	newFile      bool
-	enums        map[string]interface{}
+	enums        existMap
+	inputs       map[string]*InputObject
 )
+
+func (e existMap) has(key string) bool {
+	_, ok := e[key]
+	return ok
+}
 
 //This is meant to generate golang stubs from a .graphql file
 func main() {
@@ -35,22 +44,26 @@ func main() {
 	if err := s.Parse(schemaString); err != nil {
 		panic(fmt.Sprintf("Problems parsing %s:\n\t %s", os.Args[1], err))
 	}
-
-	resolver := newResolver(s.EntryPointNames["query"], false)
+	resolver := newResolver(s.EntryPointNames["query"])
 	if newFile {
 		writeDefault(resolver)
 	}
 
-	enums = make(map[string]interface{})
+	// Finding inputs and enums
+	inputs = make(map[string]*InputObject)
+	enums = make(existMap)
 	for _, t := range s.Types {
-		if t.Kind() == "ENUM" {
-			enums[t.TypeName()] = true
+		switch t := t.(type) {
+		case *schema.Enum:
+			enums[t.Name] = true
+		case *schema.InputObject:
+			inputs[t.Name] = newInputObject(t)
 		}
 	}
 
 	// Going through objects and creating resolvers
 	for _, o := range s.Objects {
-		resolver = newResolver(o.Name, false)
+		resolver = newResolver(o.Name)
 		w.WriteString(resolver.structString())
 		for _, fname := range o.FieldOrder {
 			f := o.Fields[fname]
@@ -61,6 +74,12 @@ func main() {
 			w.WriteString(resolver.funcName(fname, f.Type.String(), false, args))
 		}
 	}
+
+	// Go through input types and create structs
+	for _, t := range inputs {
+		w.WriteString(t.Struct())
+	}
+
 	w.Flush()
 }
 
