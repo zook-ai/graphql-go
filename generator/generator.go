@@ -9,16 +9,20 @@ import (
 	"github.com/zook-ai/graphql-go/internal/schema"
 )
 
-// [] support multiple entrypoints
+// [] support mutation
+// [] support subscription
 // [] support interfaces
 // [] support input Objects
-// [] support enums
+// [X] support enums
+// [] support arrays
 // [X] Don't overwrite if the file exists.
+// [] parse output files and only add missing methods
 var (
 	schemaString string
 	stub         *os.File
 	w            *bufio.Writer
 	newFile      bool
+	enums        map[string]interface{}
 )
 
 //This is meant to generate golang stubs from a .graphql file
@@ -37,6 +41,14 @@ func main() {
 		writeDefault(resolver)
 	}
 
+	enums = make(map[string]interface{})
+	for _, t := range s.Types {
+		if t.Kind() == "ENUM" {
+			enums[t.TypeName()] = true
+		}
+	}
+
+	// Going through objects and creating resolvers
 	for _, o := range s.Objects {
 		resolver = newResolver(o.Name, false)
 		w.WriteString(resolver.structString())
@@ -49,7 +61,6 @@ func main() {
 			w.WriteString(resolver.funcName(fname, f.Type.String(), false, args))
 		}
 	}
-
 	w.Flush()
 }
 

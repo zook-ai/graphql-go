@@ -43,6 +43,11 @@ func convertType(t string) (real string) {
 	if required {
 		t = t[:len(t)-1]
 	}
+
+	if _, contains := enums[t]; contains {
+		t = "String"
+	}
+
 	switch t {
 	case "Int":
 		real = "int"
@@ -58,6 +63,7 @@ func convertType(t string) (real string) {
 		real = newResolver(t, required).getName()
 		nomatch = true
 	}
+
 	if !nomatch && !required {
 		real = "*" + real
 	}
