@@ -63,6 +63,13 @@ func toPrivate(n string) (out string) {
 	return
 }
 
+func toPublic(n string) (out string) {
+	if len(n) > 0 {
+		out = strings.ToUpper(n[:1]) + n[1:]
+	}
+	return
+}
+
 func translate(qtype string) (gotype string) {
 	required := qtype[len(qtype)-1:] == "!"
 	if required {

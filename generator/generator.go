@@ -3,10 +3,14 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/ioutil"
 	"log"
 	"os"
-	"strings"
+
+	"reflect"
 
 	"github.com/zook-ai/graphql-go/internal/schema"
 )
@@ -17,6 +21,7 @@ import (
 // [X] support input Objects
 // [X] support enums
 // [X] support arrays
+// [] support multiple inputs
 // [] support unions
 // [X] Don't overwrite if the file exists.
 // [] parse output files and only add missing methods
@@ -52,6 +57,8 @@ func main() {
 	resolver.name = toPrivate(s.EntryPointNames["query"] + "Resolver")
 	if newFile {
 		writeDefault(resolver)
+	} else {
+		// return
 	}
 
 	// Finding inputs and enums
@@ -75,7 +82,7 @@ func main() {
 		r := newResolver(o)
 		w.WriteString(r.Struct())
 		for _, f := range r.funcs {
-			w.WriteString(f)
+			w.WriteString(f.String())
 		}
 	}
 
@@ -87,7 +94,8 @@ func main() {
 	// interfaces
 	for _, i := range interfaces {
 		// Print the interface
-		w.WriteString(i.String())
+		s := i.String()
+		w.WriteString(s)
 
 		// Create a resolver for interface
 		w.WriteString(fmt.Sprintf("\ntype %sResolver struct{\n\t%s\n}\n", i.name, i.name))
@@ -123,7 +131,7 @@ func parseArguments() {
 
 	//Open output path
 	out := os.Args[2]
-	existed := exists(out)
+	existed := fileExists(out)
 	if !existed {
 		newFile = true
 		stub, err = os.Create(out)
@@ -136,7 +144,6 @@ func parseArguments() {
 	if err != nil {
 		log.Fatalf("Opening file %s went badly: %s\n ", out, err)
 	}
-
 	if existed {
 		parseFile(out)
 	}
@@ -167,7 +174,7 @@ func main() {}
 
 }
 
-func exists(name string) bool {
+func fileExists(name string) bool {
 	if _, err := os.Stat(name); os.IsNotExist(err) {
 		return false
 	}
@@ -175,21 +182,112 @@ func exists(name string) bool {
 }
 
 func parseFile(fname string) {
-	f, err := os.Open(fname)
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, fname, nil, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
-	bytes, err := ioutil.ReadAll(f)
-	if err != nil {
-		log.Fatal(err)
-	}
-	lines := strings.Split(string(bytes), "\n")
-	for _, line := range lines {
-		trimmed := strings.Trim(line, " ")
-		if strings.Index(trimmed, "func") == 0 {
-			fmt.Println("FUNCTION: ", line)
-		} else if strings.Index(trimmed, "type") == 0 {
-			fmt.Println("TYPE:", line)
+	exists = make(map[string]existMap)
+	exists["func"] = make(existMap)
+	exists["struct"] = make(existMap)
+	exists["interface"] = make(existMap)
+
+	for _, d := range f.Decls {
+		// fmt.Println(reflect.TypeOf(d))
+		switch d := d.(type) {
+		case *ast.GenDecl:
+			for _, spec := range d.Specs {
+				switch s := spec.(type) {
+				case *ast.TypeSpec:
+					switch t := s.Type.(type) {
+					case *ast.StructType:
+						var str Struct
+						str.name = s.Name.Name
+						for _, field := range t.Fields.List {
+							var f Field
+							f.typpe = getType(field.Type)
+							for _, name := range field.Names {
+								f.name = name.Name
+								str.fields = append(str.fields, f)
+							}
+						}
+						exists["struct"][str.String()] = true
+
+					case *ast.InterfaceType:
+						var i Interface
+						i.name = s.Name.Name
+						for _, m := range t.Methods.List {
+							m2 := method{name: m.Names[0].Name}
+							switch t := m.Type.(type) {
+							case *ast.FuncType:
+								for _, param := range t.Params.List {
+									arg := Arg{t: getType(param.Type)}
+									if len(param.Names) > 0 {
+										arg.name = param.Names[0].Name
+									}
+									m2.args = append(m2.args, arg)
+								}
+							}
+							i.methods = append(i.methods, m2)
+						}
+						exists["interface"][i.String()] = true
+					}
+				}
+			}
+		case *ast.FuncDecl:
+			var name = d.Name.Name
+
+			var args Args
+			if d.Type.Params != nil {
+				for _, params := range d.Type.Params.List {
+					switch s := params.Type.(type) {
+					case *ast.StarExpr:
+						switch p := s.X.(type) {
+						case *ast.StructType:
+							for _, f := range p.Fields.List {
+								t := getType(f.Type)
+								for _, n := range f.Names {
+									args = append(args, Arg{name: n.Name, t: t})
+								}
+							}
+						}
+					}
+				}
+			}
+			var ret Field
+			if d.Type.Results != nil {
+				for _, res := range d.Type.Results.List {
+					ret.typpe = getType(res.Type)
+					if len(res.Names) > 0 {
+						ret.name = res.Names[0].Name
+					}
+				}
+			}
+			var recv Field
+			if d.Recv != nil {
+				for _, r := range d.Recv.List {
+					recv.typpe = getType(r.Type)
+					recv.name = r.Names[0].Name
+				}
+			}
+			f := newFunc(name, recv, args, ret)
+			exists["func"][f.String()] = true
 		}
 	}
+}
+
+func getType(expr ast.Expr) string {
+	switch r := expr.(type) {
+	case *ast.StarExpr:
+		return "*" + fmt.Sprint(r.X)
+	case *ast.ArrayType:
+		return "[]" + getType(r.Elt)
+	case *ast.SelectorExpr:
+		return fmt.Sprintf("%s.%s", r.X, r.Sel)
+	case *ast.Ident:
+		return r.Name
+	default:
+		fmt.Println("YOU MISSED THIS:", reflect.TypeOf(r))
+	}
+	return ""
 }

@@ -45,3 +45,7 @@ func (i *InputObject) args() (args string) {
 	}
 	return
 }
+
+func (f Field) String() string {
+	return f.name + " " + f.typpe
+}

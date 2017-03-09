@@ -33,6 +33,9 @@ func newInterface(t *schema.Interface) *Interface {
 }
 
 func (i Interface) String() string {
+	if !newFile && exists["interface"].has(i.String()) {
+		return ""
+	}
 	return fmt.Sprintf("\ntype %s interface {\n%s}\n", i.name, i.methods.String())
 }
 
