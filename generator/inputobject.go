@@ -13,6 +13,7 @@ type InputObject struct {
 	fields []Field
 }
 
+// Field should be replaced with Arg
 type Field struct {
 	name  string
 	typpe string
@@ -24,16 +25,12 @@ func newInputObject(t *schema.InputObject) *InputObject {
 		field := t.Fields[fieldName]
 		r.addField(field.Name, field.Type.String())
 	}
-	if len(t.Name) > 0 {
-		r.name = strings.ToLower(t.Name[:1]) + t.Name[1:] + "Input"
-	} else {
-		r.name = "input"
-	}
+	r.name = toPrivate(t.Name + "Input")
 	return &r
 }
 
-func (i *InputObject) Struct() string {
-	return fmt.Sprintf("type %s struct {\n%s}", i.name, i.args())
+func (i *InputObject) String() string {
+	return fmt.Sprintf("\ntype %s struct {\n%s}\n", i.name, i.args())
 }
 
 func (i *InputObject) addField(name, typpe string) {

@@ -11,7 +11,7 @@ import (
 
 // [] support mutation
 // [] support subscription
-// [] support interfaces
+// [X] support interfaces
 // [X] support input Objects
 // [X] support enums
 // [X] support arrays
@@ -26,6 +26,7 @@ var (
 	w            *bufio.Writer
 	newFile      bool
 	enums        existMap
+	interfaces   map[string]*Interface
 	inputs       map[string]*InputObject
 )
 
@@ -46,7 +47,7 @@ func main() {
 	}
 	var tmp Resolver
 	resolver := &tmp
-	resolver.name = resolverName(s.EntryPointNames["query"])
+	resolver.name = toPrivate(s.EntryPointNames["query"] + "Resolver")
 	if newFile {
 		writeDefault(resolver)
 	}
@@ -54,16 +55,20 @@ func main() {
 	// Finding inputs and enums
 	inputs = make(map[string]*InputObject)
 	enums = make(existMap)
+	interfaces = make(map[string]*Interface)
 	for _, t := range s.Types {
 		switch t := t.(type) {
 		case *schema.Enum:
 			enums[t.Name] = true
 		case *schema.InputObject:
 			inputs[t.Name] = newInputObject(t)
+		case *schema.Interface:
+			interfaces[t.Name] = newInterface(t)
 		}
 	}
 
 	// Going through objects and creating resolvers
+	// Need to check if we implement an interface
 	for _, o := range s.Objects {
 		r := newResolver(o)
 		w.WriteString(r.Struct())
@@ -74,7 +79,27 @@ func main() {
 
 	// Go through input types and create structs
 	for _, t := range inputs {
-		w.WriteString(t.Struct())
+		w.WriteString(t.String())
+	}
+
+	// interfaces
+	for _, i := range interfaces {
+		// Print the interface
+		w.WriteString(i.String())
+
+		// Create a resolver for interface
+		w.WriteString(fmt.Sprintf("\ntype %sResolver struct{\n\t%s\n}\n", i.name, i.name))
+
+		// Create translations to structs
+		for _, name := range i.implementedBy {
+			w.WriteString(fmt.Sprintf(
+				`
+				func (r *%sResolver) To%s() (%s, bool) {
+				c, ok := r.%s.(%s)
+				return c, ok
+			}`,
+				i.name, name, translate(name), i.name, translate(name)))
+		}
 	}
 
 	w.Flush()
