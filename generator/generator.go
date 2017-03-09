@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
+	"strings"
 
 	"github.com/zook-ai/graphql-go/internal/schema"
 )
@@ -121,19 +123,22 @@ func parseArguments() {
 
 	//Open output path
 	out := os.Args[2]
-	if !exists(out) {
+	existed := exists(out)
+	if !existed {
 		newFile = true
 		stub, err = os.Create(out)
 		if err != nil {
-			fmt.Printf("Creation of file %s went badly: %s\n", out, err)
-			os.Exit(1)
+			log.Fatalf("Creation of file %s went badly: %s\n", out, err)
 		}
 		return
 	}
 	stub, err = os.OpenFile(out, os.O_APPEND|os.O_WRONLY, 0666)
 	if err != nil {
-		fmt.Printf("Opening file %s went badly: %s\n ", out, err)
-		os.Exit(1)
+		log.Fatalf("Opening file %s went badly: %s\n ", out, err)
+	}
+
+	if existed {
+		parseFile(out)
 	}
 }
 
@@ -167,4 +172,24 @@ func exists(name string) bool {
 		return false
 	}
 	return true
+}
+
+func parseFile(fname string) {
+	f, err := os.Open(fname)
+	if err != nil {
+		log.Fatal(err)
+	}
+	bytes, err := ioutil.ReadAll(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+	lines := strings.Split(string(bytes), "\n")
+	for _, line := range lines {
+		trimmed := strings.Trim(line, " ")
+		if strings.Index(trimmed, "func") == 0 {
+			fmt.Println("FUNCTION: ", line)
+		} else if strings.Index(trimmed, "type") == 0 {
+			fmt.Println("TYPE:", line)
+		}
+	}
 }
