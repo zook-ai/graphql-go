@@ -43,7 +43,10 @@ func (r *Resolver) getName() (f string) {
 }
 
 func (r *Resolver) newFunc(name, returnType string, args Args) Func {
-	return newFunc(name, Field{name: "r", typpe: "*" + r.name}, args, Field{typpe: translate(returnType)})
+	ret := Arg{typpe: translate(returnType)}
+	f := newFunc(name, Field{name: "r", typpe: "*" + r.name}, args, Args{ret})
+	f.body = defaultRet(ret.typpe)
+	return f
 }
 
 func (r *Resolver) funcName(name, returnType string, args Args) string {
@@ -55,8 +58,8 @@ func (r *Resolver) funcName(name, returnType string, args Args) string {
 
 // Struct echoes the struct of a resolver
 func (r *Resolver) Struct() string {
-	if !newFile && exists["struct"].has(r.s.String()) {
+	if exists.hasStruct(&r.s) {
 		return ""
 	}
-	return fmt.Sprintf("\ntype %s struct{\n%s}\n", r.name, r.args.String())
+	return fmt.Sprintf(r.s.String())
 }

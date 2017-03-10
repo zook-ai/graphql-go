@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/zook-ai/graphql-go/internal/schema"
@@ -9,8 +8,7 @@ import (
 
 // InputObject holds the name of a resolver
 type InputObject struct {
-	name   string
-	fields []Field
+	s *Struct
 }
 
 // Field should be replaced with Arg
@@ -21,26 +19,30 @@ type Field struct {
 
 func newInputObject(t *schema.InputObject) *InputObject {
 	var r InputObject
+	r.s = &Struct{}
 	for _, fieldName := range t.FieldOrder {
 		field := t.Fields[fieldName]
 		r.addField(field.Name, field.Type.String())
 	}
-	r.name = toPrivate(t.Name + "Input")
+	r.s.name = toPrivate(t.Name + "Input")
 	return &r
 }
 
 func (i *InputObject) String() string {
-	return fmt.Sprintf("\ntype %s struct {\n%s}\n", i.name, i.args())
+	if exists.hasStruct(i.s) {
+		return ""
+	}
+	return i.s.String()
 }
 
 func (i *InputObject) addField(name, typpe string) {
 	//TODO translate type
 	name = strings.ToUpper(name[:1]) + name[1:]
-	i.fields = append(i.fields, Field{name, translate(typpe)})
+	i.s.fields = append(i.s.fields, Field{name, translate(typpe)})
 }
 
 func (i *InputObject) args() (args string) {
-	for _, field := range i.fields {
+	for _, field := range i.s.fields {
 		args += "\t" + field.name + "\t" + field.typpe + "\n"
 	}
 	return

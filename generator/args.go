@@ -10,8 +10,8 @@ import (
 
 // Arg holds the name, type and notnull of an argument to a function§
 type Arg struct {
-	name string
-	t    string
+	name  string
+	typpe string
 }
 
 // Args is a list of arguments with print functionality
@@ -19,13 +19,13 @@ type Args []Arg
 
 func argFromField(field *schema.Field) (a Arg) {
 	a.name = field.Name
-	a.t = field.Type.String()
+	a.typpe = field.Type.String()
 	return
 }
 
 func argFromInputValue(in *common.InputValue) (a Arg) {
 	a.name = in.Name
-	a.t = translate(in.Type.String())
+	a.typpe = translate(in.Type.String())
 	return
 }
 
@@ -38,9 +38,24 @@ func (args *Args) String() (sum string) {
 
 // StringAsArgument returns
 func (args *Args) StringAsArgument() string {
-	sum := args.String()
+	var sum string
+	for _, arg := range *args {
+		sum += arg.String() + ";"
+	}
 	if len(sum) > 0 {
 		return fmt.Sprintf("args *struct{ %s }", sum)
+	}
+	return ""
+}
+
+// StringAsReturns returns args formatted for return values
+func (args *Args) StringAsReturns() string {
+	var sum string
+	for _, arg := range *args {
+		sum += arg.String() + ", "
+	}
+	if len(sum) > 0 {
+		return sum[:len(sum)-2]
 	}
 	return ""
 }
@@ -51,9 +66,9 @@ func (args *Args) add(a Arg) {
 
 func (a Arg) String() string {
 	if len(a.name) > 0 {
-		return fmt.Sprint(strings.ToUpper(a.name[:1]), a.name[1:], " ", a.t)
+		return fmt.Sprint(toPublic(a.name), " ", a.typpe)
 	}
-	return translate(a.t)
+	return a.typpe
 }
 
 func toPrivate(n string) (out string) {
@@ -93,7 +108,7 @@ func convertType(t string) (real string) {
 	}
 
 	if i, ok := inputs[t]; ok {
-		return i.name
+		return i.s.name
 	}
 
 	switch t {

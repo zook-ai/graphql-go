@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/zook-ai/graphql-go/internal/schema"
 )
@@ -33,9 +32,6 @@ func newInterface(t *schema.Interface) *Interface {
 }
 
 func (i Interface) String() string {
-	if !newFile && exists["interface"].has(i.String()) {
-		return ""
-	}
 	return fmt.Sprintf("\ntype %s interface {\n%s}\n", i.name, i.methods.String())
 }
 
@@ -47,7 +43,7 @@ func newMethod(f *schema.Field) (m method) {
 }
 
 func (m method) String() string {
-	return "\t" + strings.ToUpper(m.name[:1]) + m.name[1:] + "() \t" + m.typpe + "\n"
+	return "\t" + toPublic(m.name) + "() \t" + m.typpe + "\n"
 }
 
 func (ms *methods) add(method method) {

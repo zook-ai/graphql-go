@@ -10,7 +10,10 @@ type Struct struct {
 func (s Struct) String() string {
 	var fields string
 	for _, f := range s.fields {
-		fields += f.String() + "\n"
+		fields += "\t" + f.String() + "\n"
 	}
-	return fmt.Sprintf("type %s struct{\n\t%s\n}", s.name, fields)
+	if len(fields) > 0 {
+		fields = "\n" + fields
+	}
+	return fmt.Sprintf("\ntype %s struct{%s}\n", s.name, fields)
 }

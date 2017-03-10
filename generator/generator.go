@@ -24,7 +24,7 @@ import (
 // [] support multiple inputs
 // [] support unions
 // [X] Don't overwrite if the file exists.
-// [] parse output files and only add missing methods
+// [X] parse output files and only add missing methods
 type existMap map[string]interface{}
 
 var (
@@ -94,21 +94,24 @@ func main() {
 	// interfaces
 	for _, i := range interfaces {
 		// Print the interface
-		s := i.String()
-		w.WriteString(s)
+		if !exists.hasInterface(i) {
+			w.WriteString(i.String())
+		}
 
 		// Create a resolver for interface
-		w.WriteString(fmt.Sprintf("\ntype %sResolver struct{\n\t%s\n}\n", i.name, i.name))
+		str := Struct{name: i.name + "Resolver", fields: []Field{Field{typpe: i.name}}}
+		if !exists.hasStruct(&str) {
+			w.WriteString(str.String())
+		}
 
 		// Create translations to structs
 		for _, name := range i.implementedBy {
-			w.WriteString(fmt.Sprintf(
-				`
-				func (r *%sResolver) To%s() (%s, bool) {
-				c, ok := r.%s.(%s)
-				return c, ok
-			}`,
-				i.name, name, translate(name), i.name, translate(name)))
+			fun := Func{name: "To" + name, recv: Field{"r", "*" + i.name + "Resolver"}}
+			fun.body = fmt.Sprintf("c, ok := r.%s.(%s)\n\treturn c, ok", i.name, translate(name))
+			fun.ret = Args{Arg{typpe: translate(name)}, Arg{typpe: "bool"}}
+			if !exists.hasFunc(fun) {
+				w.WriteString(fun.String())
+			}
 		}
 	}
 
@@ -188,9 +191,6 @@ func parseFile(fname string) {
 		log.Fatal(err)
 	}
 	exists = make(map[string]existMap)
-	exists["func"] = make(existMap)
-	exists["struct"] = make(existMap)
-	exists["interface"] = make(existMap)
 
 	for _, d := range f.Decls {
 		// fmt.Println(reflect.TypeOf(d))
@@ -210,8 +210,11 @@ func parseFile(fname string) {
 								f.name = name.Name
 								str.fields = append(str.fields, f)
 							}
+							if len(field.Names) == 0 {
+								str.fields = append(str.fields, f)
+							}
 						}
-						exists["struct"][str.String()] = true
+						exists.putStruct(str)
 
 					case *ast.InterfaceType:
 						var i Interface
@@ -221,16 +224,19 @@ func parseFile(fname string) {
 							switch t := m.Type.(type) {
 							case *ast.FuncType:
 								for _, param := range t.Params.List {
-									arg := Arg{t: getType(param.Type)}
+									arg := Arg{typpe: getType(param.Type)}
 									if len(param.Names) > 0 {
 										arg.name = param.Names[0].Name
 									}
 									m2.args = append(m2.args, arg)
 								}
+								for _, ret := range t.Results.List {
+									m2.typpe = getType(ret.Type)
+								}
 							}
 							i.methods = append(i.methods, m2)
 						}
-						exists["interface"][i.String()] = true
+						exists.putInterface(i)
 					}
 				}
 			}
@@ -247,19 +253,23 @@ func parseFile(fname string) {
 							for _, f := range p.Fields.List {
 								t := getType(f.Type)
 								for _, n := range f.Names {
-									args = append(args, Arg{name: n.Name, t: t})
+									args = append(args, Arg{n.Name, t})
 								}
 							}
 						}
 					}
 				}
 			}
-			var ret Field
+			var ret Args
 			if d.Type.Results != nil {
 				for _, res := range d.Type.Results.List {
-					ret.typpe = getType(res.Type)
-					if len(res.Names) > 0 {
-						ret.name = res.Names[0].Name
+					r := Arg{typpe: getType(res.Type)}
+					for _, name := range res.Names {
+						r.name = name.Name
+						ret = append(ret, r)
+					}
+					if len(res.Names) == 0 {
+						ret = append(ret, r)
 					}
 				}
 			}
@@ -271,7 +281,7 @@ func parseFile(fname string) {
 				}
 			}
 			f := newFunc(name, recv, args, ret)
-			exists["func"][f.String()] = true
+			exists.putFunc(f)
 		}
 	}
 }
