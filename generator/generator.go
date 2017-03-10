@@ -21,7 +21,7 @@ import (
 // [X] support input Objects
 // [X] support enums
 // [X] support arrays
-// [] support multiple inputs
+// [X] support multiple inputs
 // [] support unions
 // [X] Don't overwrite if the file exists.
 // [X] parse output files and only add missing methods
