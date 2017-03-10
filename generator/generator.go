@@ -15,6 +15,7 @@ import (
 	"github.com/zook-ai/graphql-go/internal/schema"
 )
 
+// [] support scalars
 // [] support mutation
 // [] support subscription
 // [X] support interfaces

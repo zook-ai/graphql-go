@@ -82,6 +82,9 @@ func toPublic(n string) (out string) {
 	if len(n) > 0 {
 		out = strings.ToUpper(n[:1]) + n[1:]
 	}
+	if out == "Id" {
+		return "ID"
+	}
 	return
 }
 
