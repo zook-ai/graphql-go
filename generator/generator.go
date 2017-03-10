@@ -36,6 +36,7 @@ var (
 	enums        existMap
 	interfaces   map[string]*Interface
 	inputs       map[string]*InputObject
+	in           string
 )
 
 func (e existMap) has(key string) bool {
@@ -55,7 +56,7 @@ func main() {
 	}
 	var tmp Resolver
 	resolver := &tmp
-	resolver.name = toPrivate(s.EntryPointNames["query"] + "Resolver")
+	resolver.name = "resolver"
 	if newFile {
 		writeDefault(resolver)
 	} else {
@@ -125,7 +126,7 @@ func parseArguments() {
 		os.Exit(1)
 	}
 	//Read in file
-	in := os.Args[1]
+	in = os.Args[1]
 	schemaBytes, err := ioutil.ReadFile(in)
 	if err != nil {
 		fmt.Printf("Could not read %s: [%s]\n", in, err)
@@ -166,7 +167,7 @@ var schema *graphql.Schema
 
 func init() {
 	var err error
-	b, err := ioutil.ReadFile("schema.gql")
+	b, err := ioutil.ReadFile("` + in + `")
 	if err != nil {
 		panic(err)
 	}
