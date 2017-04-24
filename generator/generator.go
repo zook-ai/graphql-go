@@ -16,7 +16,7 @@ import (
 )
 
 // [] support scalars
-// [] support mutation
+// [X] support mutation
 // [] support subscription
 // [X] support interfaces
 // [X] support input Objects

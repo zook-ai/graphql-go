@@ -125,6 +125,8 @@ func convertType(t string) (real string) {
 		real = "float32"
 	case "ID":
 		real = "graphql.ID"
+	case "Time":
+		real = "graphql.Time"
 	default:
 		real = "*" + toPrivate(t+"Resolver")
 	}
@@ -147,6 +149,8 @@ func defaultRet(t string) (d string) {
 			return "return 0"
 		case "graphql.ID":
 			return "return \"\""
+		case "graphql.Time":
+			return "graphql.Time{}"
 		default:
 			return "return &" + t + "{}"
 		}
