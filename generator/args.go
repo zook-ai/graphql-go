@@ -150,7 +150,7 @@ func defaultRet(t string) (d string) {
 		case "graphql.ID":
 			return "return \"\""
 		case "graphql.Time":
-			return "graphql.Time{}"
+			return "return graphql.Time{}"
 		default:
 			return "return &" + t + "{}"
 		}
